@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<otrs_package version="1.1">
+    <Name>KeepSelected</Name>
+    <Version>5.0.4</Version>
+    <Vendor>Complemento [Free]</Vendor>
+    <URL>http://www.complemento.net.br/otrs</URL>
+    <License>GNU GENERAL PUBLIC LICENSE Version 2, June 1991</License>
+    <Description Lang="en">Adds Bulk Action Pagination hability!</Description>
+    <Framework>5.x.x</Framework>
+    <Filelist>
+        <File Location="Custom/KeepSelected.sopm" Permission="644"></File>
+        <File Location="Kernel/Config/Files/KeepSelected.xml" Permission="644"></File>
+        <File Location="Kernel/Output/HTML/Templates/Standard/ShowBulkActionPagination.tt" Permission="644"></File>
+        <File Location="Kernel/Output/HTML/OutputFilterBulkActionPagination.pm" Permission="644"></File>
+        <File Location="Kernel/Language/pt_BR_BulkActionPagination.pm" Permission="644"></File>
+    </Filelist>
+</otrs_package>

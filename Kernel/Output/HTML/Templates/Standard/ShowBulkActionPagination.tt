@@ -1,0 +1,220 @@
+[% WRAPPER JSOnDocumentComplete %] 
+<script type="text/javascript">//<![CDATA[
+//ShowBulkActionPagination <- Do Not Remove this
+
+//Variaveis
+var TicketID=[[% Data.TicketList %]];
+//Texto original do bulk
+var bulkText=$('#BulkAction a').text();
+//Seletor dos checkboxes
+var mySelector='div.Overview table td input[type="checkbox"][name=TicketID]';
+
+$( function() {
+	//Ajusta texto do bulkText
+	updateBulkText();
+	// Adiciona botão limpar
+	$('div.OverviewActions ul.Actions').append(
+		$('<li id="CleanAllSelected" class="AlwaysPresent"><a href="#">[% Translate("Unselect All") %]</a></li>').click(function(){cleanAll();})
+	);
+	//Habilita botão massa, caso haja um chamado selecionado anteriormente
+	Core.UI.ActionRow.UpdateActionRow(undefined, undefined, $('div.OverviewActions ul.Actions'));
+		
+	// retira ou adiciona ticketid no array quando checkbox é marcado ou desmarcado
+	// Altera texto do botão massa
+            
+	$(mySelector).unbind('click');
+	$(mySelector).click(function (Event) {
+        Event.stopPropagation();
+		if(!$(this).prop("checked")){
+			//remove item desmarcado
+		    var index = TicketID.indexOf($(this).val());
+		    if (index > -1) {
+		        TicketID.splice(index, 1);
+		    }
+		} else {
+			//verifica se item já faz parte do array e adiciona
+		    var index = TicketID.indexOf($(this).val());
+		    if (index == -1) {
+		        TicketID.push($(this).val());
+		    }
+		}
+		// atualiza texto do botão massa
+		updateBulkText();
+		Core.UI.ActionRow.UpdateActionRow($(this), $(mySelector), $('div.OverviewActions ul.Actions'));
+	});
+
+	// marca todos os itens selecionados ao carregar página
+	remarkCheckboxes();
+	// Altera URL da Paginacao, carregando os ids selecionados para a próxima página
+	$('span.Pagination a').click(function( event ) {
+		var $SelectedTickets,
+		    TicketIDParameter = "BulkTicketID=",
+		    TicketIDs = "",
+		    URL;
+			$.each(TicketID,function () {
+				TicketIDs += TicketIDParameter + this + ";";
+			});
+			$SelectedTickets = $(mySelector + ':checked');
+			$SelectedTickets.each(function () {
+				if($.inArray($(this).val(), TicketID) == -1){
+					TicketIDs += TicketIDParameter + $(this).val() + ";";
+				};
+			  });
+		  $(this).attr("href", this.href + ";"+TicketIDs);  
+	});
+
+	// Altera o bind do click do botão Bulk Action, para enviar TicketID da variavel javascript e não do checkbox
+	$('#BulkAction a').unbind('click');
+	$('#BulkAction a').bind('click', function () {
+		var $Element = $(this),
+		    $SelectedTickets,
+		    TicketIDParameter = "TicketID=",
+		    TicketIDs = "",
+		    URL;
+		if ($Element.parent('li').hasClass('Inactive')) {
+		    return false;
+		}
+		else {
+			$SelectedTickets = $(mySelector + ':checked');
+			$.each(TicketID,function () {
+				TicketIDs += TicketIDParameter + this + ";";
+			});
+			$SelectedTickets.each(function () {
+				if($.inArray($(this).val(), TicketID) == -1){
+					TicketIDs += TicketIDParameter + $(this).val() + ";";
+				};
+			  });
+		    URL = Core.Config.Get('Baselink') + "Action=AgentTicketBulk;" + TicketIDs;
+		    URL += SerializeData(Core.App.GetSessionInformation());
+		    Core.UI.Popup.OpenPopup(URL, 'TicketAction');
+		}
+		return false;
+	});
+
+	// Arruma botão Selecionar todos, para disparar o evento correto 
+	$('#SelectAllTickets').unbind('click');
+	$('#SelectAllTickets').bind('click', function () {
+		var Status = $(this).prop('checked');
+		if(Status){
+			$(mySelector).each(function(e){
+				if(!$(this).prop('checked')){
+					$(this).trigger('click');
+				}
+			})    
+		} else {
+			$(mySelector).each(function(e){
+				if($(this).prop('checked')){
+					$(this).trigger('click');
+				}
+			})
+		}
+	});
+});
+ 
+/**
+ * @private
+ * @name SerializeData
+ * @memberof Core.UI.ActionRow
+ * @function
+ * @returns {String} Query string of the data.
+ * @param {Object} Data - The data that should be converted.
+ * @description
+ *      Converts a given hash into a query string.
+ */
+function SerializeData(Data) {
+    var QueryString = '';
+    $.each(Data, function (Key, Value) {
+        QueryString += ';' + encodeURIComponent(Key) + '=' + encodeURIComponent(Value);
+    });
+    return QueryString;
+}
+
+// Limpar todos os selecionados
+function cleanAll(){
+	// se o botão selectAll estiver marcado, desmarca
+	if($('#SelectAllTickets').is(':checked')){
+		$('#SelectAllTickets').click();
+	}
+	TicketID=[];
+	remarkCheckboxes();
+	//Caso não haja tickets marcados nesta pagina, atualiza texto e desmarca botão
+	updateBulkText();
+	Core.UI.ActionRow.UpdateActionRow(undefined, undefined, $('div.OverviewActions ul.Actions'));
+}
+
+// marca todos os itens selecionados ao carregar página
+function remarkCheckboxes(){
+	$(mySelector).each(function () {
+		if(($.inArray($(this).val(), TicketID) != -1)){
+			if(!$(this).prop("checked")){
+			    $(this).trigger("click");
+			}
+		} else {
+			if($(this).prop("checked")){
+			    $(this).trigger("click");
+			}
+		}
+		;
+	});
+
+}
+
+//Ajusta texto do botão massa
+function updateBulkText(){	
+	if(TicketID.length>0){
+		$('#BulkAction a').text(bulkText + ' ('+TicketID.length+')');	
+	} else {
+		$('#BulkAction a').text(bulkText);	
+	}
+}
+
+// UpdateActionRow - Altera função, para habilitar apenas o botão massa, inclusive quando houver 
+// tickets selecionados em paginas anteriores
+Core.UI.ActionRow.UpdateActionRow = function ($ClickedElement, $Checkboxes, $ActionRow) {
+
+    var TicketActionData,
+        ActionRowElement;
+
+    // Check, if one or more items are selected
+    // No checkbox is selected
+    if (TicketID.length < 1) {
+        // Remove actions and deactivate bulk action
+        $ActionRow.find('li').addClass('Inactive');
+    }
+    // Exactly one checkbox is selected
+<!--    else if (TicketID.length === 1 && !$('#SelectAllTickets').is(':checked')) {-->
+<!--        // Update actions and activate bulk action-->
+<!--        $ActionRow.find('#BulkAction').removeClass('Inactive');-->
+
+<!--        // Find the element which is active (it must not be the clicked element!)-->
+<!--        // and get the data-->
+<!--            TicketActionData = Core.Data.Get($Checkboxes.closest('li, tr'), 'Actions');-->
+<!--            if (typeof TicketActionData !== 'undefined') {-->
+<!--                $.each(TicketActionData, function (Index, Value) {-->
+<!--                    if (Value.HTML) {-->
+<!--                        $(Value.HTML).attr('id', Value.ID).appendTo($ActionRow);-->
+<!--                        ActionRowElement = $ActionRow.find('#' + Value.ID).find('a');-->
+<!--                        if (typeof Value.Target === 'undefined' || Value.Target === "") {-->
+<!--                            ActionRowElement.attr('href', Value.Link);-->
+<!--                        }-->
+<!--                        if (Value.PopupType) {-->
+<!--                            ActionRowElement.bind('click.Popup', function () {-->
+<!--                                Core.UI.Popup.OpenPopup(Value.Link, Value.PopupType);-->
+<!--                                return false;-->
+<!--                            });-->
+<!--                        }-->
+<!--                    }-->
+<!--                });-->
+<!--            }-->
+<!--    }-->
+    // Two ore more checkboxes selected
+    else {
+        // Remove actions and activate bulk action
+        $ActionRow
+            .find('li').removeClass('Inactive');
+    }
+};
+ 
+ //]]></script>
+[% END %]
+
